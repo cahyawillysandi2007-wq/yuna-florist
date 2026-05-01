@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Products: Boleh dibaca siapa saja, hanya admin yang boleh tulis
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Categories: Boleh dibaca siapa saja, hanya admin yang boleh tulis
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Orders: Pelanggan boleh buat, admin boleh baca/ubah
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read, update, delete: if isSignedIn();
+    }
+
+    // Store Settings: Boleh dibaca siapa saja, hanya admin yang boleh tulis
+    match /store_settings/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+  }
+}

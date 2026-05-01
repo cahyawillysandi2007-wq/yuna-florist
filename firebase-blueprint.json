@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A bouquet product offered by the florist.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "description": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "categoryName": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "isAvailable": { "type": "boolean" },
+        "label": { "type": "string", "description": "e.g., Best Seller, Promo, Ready" },
+        "eventTags": { "type": "array", "items": { "type": "string" } },
+        "budgetRange": { "type": "string" },
+        "dominantColor": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "categoryId", "imageUrl", "isAvailable"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "A category of bouquets.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "order": { "type": "integer" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["name", "slug", "order", "isActive"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "An order request from a customer.",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string" },
+        "customerWhatsapp": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "productPrice": { "type": "number" },
+        "note": { "type": "string" },
+        "pickupDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["New", "Processing", "Completed", "Cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerName", "customerWhatsapp", "productId", "status", "createdAt"]
+    },
+    "StoreSettings": {
+      "title": "Store Settings",
+      "description": "General settings for the flower shop.",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "instagram": { "type": "string" },
+        "facebook": { "type": "string" },
+        "address": { "type": "string" },
+        "openingHours": { "type": "string" },
+        "description": { "type": "string" },
+        "logoUrl": { "type": "string" }
+      },
+      "required": ["storeName", "whatsappNumber"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of all bouquet products."
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Collection of product categories."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of customer order requests."
+    },
+    "/store_settings/default": {
+      "schema": "StoreSettings",
+      "description": "Global store configuration."
+    }
+  }
+}

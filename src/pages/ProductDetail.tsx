@@ -138,100 +138,139 @@ Terima kasih.`;
             animate={{ opacity: 1, scale: 1 }}
             className="relative"
           >
-            <div className="aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white">
+            <div className="aspect-[4/5] rounded-xl md:rounded-2xl overflow-hidden shadow-xl border border-white bg-white">
               <img 
                 src={product.imageUrl || 'https://images.unsplash.com/photo-1522673607200-16488352475b?q=80&w=800&auto=format&fit=crop'} 
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
-            </div>
-            {product.label && (
-              <div className="absolute top-6 left-6 bg-brand-pink-dark text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg">
-                {product.label}
-              </div>
-            )}
+          </div>
           </motion.div>
 
-          {/* Info Section */}
-          <div className="flex flex-col gap-6">
-            <div>
-              <div className="flex items-center gap-2 text-brand-pink-dark text-xs font-bold uppercase tracking-widest mb-2">
-                <Tag className="w-3.5 h-3.5" />
-                <span>{product.categoryName}</span>
-              </div>
-              <h1 className="font-serif text-4xl md:text-5xl font-bold text-slate-800 tracking-tight leading-tight">
-                {product.name}
-              </h1>
-              <p className="text-3xl font-bold text-brand-pink-dark mt-4">{formatPrice(product.price)}</p>
-            </div>
+{/* Info Section */}
+<div className="bg-white rounded-xl border border-slate-100 shadow-soft p-5 md:p-7 flex flex-col gap-6">
+  <div>
+    <div className="flex items-center gap-2 text-brand-pink-dark text-xs font-bold uppercase tracking-widest mb-3">
+      <Tag className="w-3.5 h-3.5" />
+      <span>{product.categoryName}</span>
+    </div>
 
-            <div className="flex flex-wrap gap-2">
-               {product.eventTags?.map((tag) => (
-                 <span key={tag} className="bg-brand-pink px-3 py-1 rounded-full text-[10px] font-bold text-brand-pink-dark uppercase tracking-wider">{tag}</span>
-               ))}
-            </div>
+    <h1 className="font-serif text-3xl md:text-5xl font-bold text-slate-800 tracking-tight leading-tight">
+      {product.name}
+    </h1>
 
-            <div className="bg-white p-6 rounded-2xl shadow-soft border border-brand-pink-dark/5">
-              <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                 <Info className="w-4 h-4 text-brand-sage" /> Deskripsi Produk
-              </h4>
-              <p className="text-slate-500 text-sm leading-relaxed whitespace-pre-wrap">
-                {product.description || 'Tidak ada deskripsi untuk produk ini.'}
-              </p>
-            </div>
+    <p className="text-2xl md:text-3xl font-bold text-brand-pink-dark mt-4">
+      {formatPrice(product.price)}
+    </p>
+  </div>
 
-            <div className="grid grid-cols-2 gap-4 py-4 border-y border-brand-pink-dark/10">
-               <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-brand-cream flex items-center justify-center text-brand-sage">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ketersediaan</p>
-                    <p className="text-sm font-bold text-slate-800">{product.isAvailable ? 'Ready Stock' : 'Habis'}</p>
-                  </div>
-               </div>
-               <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-brand-cream flex items-center justify-center text-brand-pink-dark">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lokasi</p>
-                    <p className="text-sm font-bold text-slate-800">Adiluwih</p>
-                  </div>
-               </div>
-            </div>
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-5 border-y border-slate-100">
+    <div className="flex items-start gap-3">
+      <div className="w-10 h-10 rounded-lg bg-brand-cream flex items-center justify-center text-brand-sage shrink-0">
+        <CheckCircle2 className="w-5 h-5" />
+      </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <button
-                type="button"
-                onClick={() => {
-                  handleAddToCart();
-                  navigate('/cart');
-                }}
-                disabled={!product.isAvailable}
-                className="flex-grow bg-brand-sage text-white py-4 rounded-lg font-bold shadow-soft flex items-center justify-center gap-2 hover:bg-brand-sage/90 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                {product.isAvailable ? 'Tambah ke Keranjang' : 'Produk Habis'}
-              </button>
+      <div>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          Ketersediaan
+        </p>
 
-              <button 
-                onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({
-                      title: `Yuna Florist - ${product.name}`,
-                      text: `Lihat buket cantik ini di Yuna Florist Adiluwih!`,
-                      url: window.location.href,
-                    });
-                  }
-                }}
-                className="w-full sm:w-16 h-14 bg-white border border-brand-pink-dark/20 rounded-lg flex items-center justify-center text-brand-pink-dark hover:bg-brand-pink transition-all"
-                title="Bagikan"
-              >
-                <Share2 className="w-5 h-5" />
-            </button>
-            </div>
-          </div>
+        <p
+          className={cn(
+            'text-sm font-bold mt-1',
+            (product.stock ?? 0) <= 0
+              ? 'text-red-500'
+              : (product.stock ?? 0) <= 3
+              ? 'text-orange-500'
+              : 'text-green-600'
+          )}
+        >
+          {(product.stock ?? 0) <= 0
+            ? 'Habis'
+            : (product.stock ?? 0) <= 3
+            ? `Stok Menipis (${product.stock} tersisa)`
+            : `Ready (${product.stock} tersedia)`}
+        </p>
+      </div>
+    </div>
+
+    <div className="flex items-start gap-3">
+      <div className="w-10 h-10 rounded-lg bg-brand-cream flex items-center justify-center text-brand-pink-dark shrink-0">
+        <MapPin className="w-5 h-5" />
+      </div>
+
+      <div>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          Lokasi
+        </p>
+        <p className="text-sm font-bold text-slate-800 mt-1">
+          Yuna Florist Adiluwih
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h4 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+      <Info className="w-4 h-4 text-brand-sage" />
+      Deskripsi Produk
+    </h4>
+
+    <p className="text-slate-500 text-sm leading-relaxed whitespace-pre-wrap">
+      {product.description || 'Tidak ada deskripsi untuk produk ini.'}
+    </p>
+  </div>
+
+  {product.eventTags && product.eventTags.length > 0 && (
+    <div>
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+        Cocok Untuk
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        {product.eventTags.map((tag) => (
+          <span
+            key={tag}
+            className="bg-brand-pink px-3 py-1 rounded-lg text-[10px] font-bold text-brand-pink-dark uppercase tracking-wider"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+    <button
+      type="button"
+      onClick={() => {
+        handleAddToCart();
+        navigate('/cart');
+      }}
+      disabled={(product.stock ?? 0) <= 0}
+      className="flex-grow bg-brand-sage text-white py-4 rounded-lg font-bold shadow-soft flex items-center justify-center gap-2 hover:bg-brand-sage/90 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <ShoppingCart className="w-5 h-5" />
+      {(product.stock ?? 0) > 0 ? 'Tambah ke Keranjang' : 'Produk Habis'}
+    </button>
+
+    <button
+      onClick={() => {
+        if (navigator.share) {
+          navigator.share({
+            title: `Yuna Florist - ${product.name}`,
+            text: `Lihat buket cantik ini di Yuna Florist Adiluwih!`,
+            url: window.location.href,
+          });
+        }
+      }}
+      className="w-full sm:w-16 h-14 bg-white border border-brand-pink-dark/20 rounded-lg flex items-center justify-center text-brand-pink-dark hover:bg-brand-pink transition-all"
+      title="Bagikan"
+    >
+      <Share2 className="w-5 h-5" />
+    </button>
+  </div>
+</div>
         </div>
       </div>
 

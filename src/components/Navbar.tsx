@@ -51,11 +51,10 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { name: 'Beranda', path: '/' },
-    { name: 'Katalog', path: '/catalog' },
-    { name: 'Bantu Pilih', path: '/help-me-choose' },
-    { name: 'Cek Pesanan', path: '/orders' },
-  ];
+  { name: 'Beranda', path: '/' },
+  { name: 'Katalog', path: '/catalog' },
+  { name: 'Bantu Pilih', path: '/help-me-choose' },
+];
 
   return (
     <nav
@@ -142,36 +141,50 @@ export default function Navbar() {
 
       {/* Mobile Nav */}
       {isOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-brand-pink-dark/10 shadow-lg">
+        <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-brand-pink-dark/10 shadow-lg animate-in slide-in-from-top duration-300">
           <div className="flex flex-col p-4 gap-3">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 className={cn(
-                  "text-base font-medium p-3 rounded-lg flex items-center justify-between",
+                  "text-base font-semibold p-3 rounded-lg transition-all",
                   location.pathname === link.path
                     ? "bg-brand-pink text-brand-pink-dark"
-                    : "text-slate-600"
+                    : "text-slate-600 hover:bg-slate-50"
                 )}
                 onClick={() => setIsOpen(false)}
               >
                 {link.name}
-                {link.path === '/orders' && <ClipboardList className="w-4 h-4" />}
               </Link>
             ))}
 
-              <Link
-              to="/cart"
-              className="relative p-2.5 bg-brand-sage text-white rounded-lg shadow-sm"
-              >
-              <ShoppingCart className="w-5 h-5" />
-
-              {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-brand-pink-dark text-white text-[10px] font-bold flex items-center justify-center">
-                  {totalItems}
-                </span>
+            <Link
+              to="/orders"
+              className={cn(
+                "flex items-center justify-center gap-2 p-3 rounded-lg font-bold transition-all shadow-sm",
+                location.pathname === "/orders"
+                  ? "bg-brand-pink-dark text-white"
+                  : "bg-brand-pink text-brand-pink-dark hover:bg-brand-pink-dark hover:text-white"
               )}
+              onClick={() => setIsOpen(false)}
+            >
+              <ClipboardList className="w-5 h-5" />
+              <span>Cek Pesanan</span>
+            </Link>
+
+            <Link
+              to="/cart"
+              className={cn(
+                "flex items-center justify-center gap-2 p-3 rounded-lg font-bold transition-all shadow-sm",
+                location.pathname === "/cart"
+                  ? "bg-brand-sage text-white"
+                  : "bg-brand-sage text-white hover:bg-brand-sage/90"
+              )}
+              onClick={() => setIsOpen(false)}
+            >
+              <ShoppingCart className="w-5 h-5" />
+              <span>Keranjang</span>
             </Link>
           </div>
         </div>

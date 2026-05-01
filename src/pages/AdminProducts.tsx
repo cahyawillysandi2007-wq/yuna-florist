@@ -26,7 +26,8 @@ export default function AdminProducts() {
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { register, handleSubmit, reset, watch } = useForm();
+  const { register, handleSubmit, reset, watch, setValue } = useForm();
+  const imageUrl = watch('imageUrl');
 
   useEffect(() => {
     loadData();
@@ -35,9 +36,10 @@ export default function AdminProducts() {
   async function loadData() {
     try {
       const [p, c] = await Promise.all([
-  productService.getAllProducts(),
-  categoryService.getCategories()
-]);
+        productService.getAllProducts(),
+        categoryService.getCategories()
+      ]);
+
       setProducts(p);
       setCategories(c);
     } catch (error) {
@@ -56,8 +58,8 @@ export default function AdminProducts() {
         description: product.description,
         categoryId: product.categoryId,
         imageUrl: product.imageUrl,
-        isAvailable: String(product.isAvailable),
-        label: product.label || '',
+        labels: product.labels?.join(', ') || '',
+        stock: product.stock ?? 0,
         eventTags: product.eventTags?.join(', ') || '',
         budgetRange: product.budgetRange || '< 50k',
         dominantColor: product.dominantColor || 'Bebas'
@@ -70,8 +72,8 @@ export default function AdminProducts() {
         description: '',
         categoryId: '',
         imageUrl: '',
-        isAvailable: 'true',
-        label: '',
+        labels: '',
+        stock: 0,
         eventTags: '',
         budgetRange: '< 50k',
         dominantColor: 'Bebas'
@@ -81,21 +83,70 @@ export default function AdminProducts() {
     setIsModalOpen(true);
   };
 
+  const openCloudinaryWidget = () => {
+    if (!window.cloudinary) {
+      alert('Cloudinary belum siap. Coba refresh halaman.');
+      return;
+    }
+
+    const widget = window.cloudinary.createUploadWidget(
+      {
+        cloudName: 'dblw16ds8',
+        uploadPreset: 'yuna_florist_upload',
+        folder: 'yuna-florist/products',
+        sources: ['local', 'camera'],
+        multiple: false,
+        cropping: false,
+        maxFiles: 1,
+        resourceType: 'image',
+        clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp']
+      },
+      (error: any, result: any) => {
+        if (error) {
+          console.error(error);
+          alert('Gagal upload gambar.');
+          return;
+        }
+
+        if (result.event === 'success') {
+          const uploadedImageUrl = result.info.secure_url;
+          setValue('imageUrl', uploadedImageUrl);
+          alert('Foto berhasil diupload.');
+        }
+      }
+    );
+
+    widget.open();
+  };
+
   const onSubmit = async (data: any) => {
     setSaving(true);
 
     try {
+      const stockValue = Number(data.stock || 0);
+
       const productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
         name: data.name,
         price: Number(data.price),
         description: data.description || '',
         categoryId: data.categoryId,
-        categoryName: categories.find(c => c.id === data.categoryId)?.name || 'Uncategorized',
+        categoryName:
+          categories.find((c) => c.id === data.categoryId)?.name ||
+          'Uncategorized',
         imageUrl: data.imageUrl || '',
-        isAvailable: data.isAvailable === 'true' || data.isAvailable === true,
-        label: data.label || '',
+        labels: data.labels
+          ? data.labels
+              .split(',')
+              .map((t: string) => t.trim())
+              .filter(Boolean)
+          : [],
+        stock: stockValue,
+        isAvailable: stockValue > 0,
         eventTags: data.eventTags
-          ? data.eventTags.split(',').map((t: string) => t.trim()).filter(Boolean)
+          ? data.eventTags
+              .split(',')
+              .map((t: string) => t.trim())
+              .filter(Boolean)
           : [],
         budgetRange: data.budgetRange || '< 50k',
         dominantColor: data.dominantColor || 'Bebas'
@@ -129,18 +180,48 @@ export default function AdminProducts() {
     }
   };
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const imageUrl = watch('imageUrl');
+  const getStockStatus = (product: Product) => {
+    const stock = product.stock ?? 0;
+
+    if (stock <= 0) {
+      return {
+        label: 'Habis',
+        color: 'text-red-500',
+        dot: 'bg-red-500',
+        icon: AlertCircle
+      };
+    }
+
+    if (stock <= 3) {
+      return {
+        label: `Stok Menipis (${stock})`,
+        color: 'text-orange-500',
+        dot: 'bg-orange-500',
+        icon: AlertCircle
+      };
+    }
+
+    return {
+      label: `Ready (${stock})`,
+      color: 'text-green-600',
+      dot: 'bg-green-500',
+      icon: CheckCircle2
+    };
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Manajemen Produk</h2>
+          <h2 className="text-2xl font-bold text-slate-800">
+            Manajemen Produk
+          </h2>
           <p className="text-sm text-slate-400 font-medium italic">
             Kelola katalog buket bunga Anda di sini.
           </p>
@@ -175,40 +256,76 @@ export default function AdminProducts() {
 
         <div className="overflow-x-auto">
           <div className="block md:hidden divide-y divide-slate-50">
-            {filteredProducts.map(product => (
-              <div key={product.id} className="p-4 flex items-center gap-4">
-                <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-slate-50">
-                  {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <ImageIcon className="w-6 h-6 text-slate-300 m-5" />
-                  )}
-                </div>
+            {filteredProducts.map((product) => {
+              const status = getStockStatus(product);
 
-                <div className="flex-grow min-w-0">
-                  <h4 className="font-bold text-slate-800 truncate">{product.name}</h4>
-                  <p className="text-xs text-brand-pink-dark font-bold">{formatPrice(product.price)}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={cn(
-                      "inline-block w-2 h-2 rounded-full",
-                      product.isAvailable ? "bg-green-500" : "bg-red-500"
-                    )} />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">
-                      {product.categoryName}
-                    </span>
+              return (
+                <div key={product.id} className="p-4 flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-slate-50">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-slate-300 m-5" />
+                    )}
+                  </div>
+
+                  <div className="flex-grow min-w-0">
+                    <h4 className="font-bold text-slate-800 truncate">
+                      {product.name}
+                    </h4>
+
+                    <p className="text-xs text-brand-pink-dark font-bold">
+                      {formatPrice(product.price)}
+                    </p>
+
+                    {product.labels && product.labels.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {product.labels.map((label) => (
+                          <span
+                            key={label}
+                            className="text-[9px] font-bold text-brand-pink-dark bg-brand-pink px-2 py-0.5 rounded-md"
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 mt-2">
+                      <span
+                        className={cn(
+                          'inline-block w-2 h-2 rounded-full',
+                          status.dot
+                        )}
+                      />
+                      <span className={cn('text-[10px] font-bold', status.color)}>
+                        {status.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => handleOpenModal(product)}
+                      className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(product.id!)}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-2">
-                  <button onClick={() => handleOpenModal(product)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
-                    <Edit2 className="w-5 h-5" />
-                  </button>
-                  <button onClick={() => handleDelete(product.id!)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {!loading && filteredProducts.length === 0 && (
               <div className="p-8 text-center text-sm text-slate-400">
@@ -230,81 +347,103 @@ export default function AdminProducts() {
 
             <tbody className="divide-y divide-slate-50">
               {loading ? (
-                [1, 2, 3].map(i => <tr key={i} className="h-20 animate-pulse" />)
-              ) : filteredProducts.length > 0 ? (
-                filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-slate-50">
-                          {product.imageUrl ? (
-                            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <ImageIcon className="w-5 h-5 text-slate-300 m-3" />
-                          )}
-                        </div>
-
-                        <div>
-                          <p className="text-sm font-bold text-slate-800">{product.name}</p>
-                          {product.label && (
-                            <span className="text-[10px] font-bold text-brand-pink-dark">
-                              {product.label}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold uppercase">
-                        <Tag className="w-3 h-3" /> {product.categoryName}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-black text-slate-700">
-                        {formatPrice(product.price)}
-                      </p>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      {product.isAvailable ? (
-                        <div className="flex items-center gap-2 text-green-600">
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span className="text-xs font-bold">Ready</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-red-500">
-                          <AlertCircle className="w-4 h-4" />
-                          <span className="text-xs font-bold">Habis</span>
-                        </div>
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenModal(product)}
-                          className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(product.id!)}
-                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                          title="Hapus"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                [1, 2, 3].map((i) => (
+                  <tr key={i} className="h-20 animate-pulse" />
                 ))
+              ) : filteredProducts.length > 0 ? (
+                filteredProducts.map((product) => {
+                  const status = getStockStatus(product);
+                  const StatusIcon = status.icon;
+
+                  return (
+                    <tr
+                      key={product.id}
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-slate-50">
+                            {product.imageUrl ? (
+                              <img
+                                src={product.imageUrl}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <ImageIcon className="w-5 h-5 text-slate-300 m-3" />
+                            )}
+                          </div>
+
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">
+                              {product.name}
+                            </p>
+
+                            {product.labels && product.labels.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {product.labels.map((label) => (
+                                  <span
+                                    key={label}
+                                    className="text-[10px] font-bold text-brand-pink-dark bg-brand-pink px-2 py-0.5 rounded-md"
+                                  >
+                                    {label}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold uppercase">
+                          <Tag className="w-3 h-3" /> {product.categoryName}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-black text-slate-700">
+                          {formatPrice(product.price)}
+                        </p>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className={cn('flex items-center gap-2', status.color)}>
+                          <StatusIcon className="w-4 h-4" />
+                          <span className="text-xs font-bold">
+                            {status.label}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleOpenModal(product)}
+                            className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDelete(product.id!)}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            title="Hapus"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-slate-400 italic text-sm">
+                  <td
+                    colSpan={5}
+                    className="px-6 py-10 text-center text-slate-400 italic text-sm"
+                  >
                     Belum ada produk.
                   </td>
                 </tr>
@@ -335,27 +474,57 @@ export default function AdminProducts() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="overflow-y-auto flex-grow p-6 md:p-8 space-y-6">
-              <div className="space-y-2">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="overflow-y-auto flex-grow p-6 md:p-8 space-y-6"
+            >
+              <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                  Link Foto Produk
+                  Foto Produk
                 </label>
-                <input
-                  type="url"
-                  {...register('imageUrl', { required: true })}
-                  placeholder="https://contoh.com/foto-buket.jpg"
-                  className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-brand-pink-dark outline-none"
-                />
 
-                {imageUrl && (
-                  <div className="mt-3 w-32 h-32 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                {imageUrl ? (
+                  <div className="w-32 h-32 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
                     <img
                       src={imageUrl}
                       alt="Preview produk"
                       className="w-full h-full object-cover"
                     />
                   </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-lg border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center">
+                    <ImageIcon className="w-8 h-8 text-slate-300" />
+                  </div>
                 )}
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={openCloudinaryWidget}
+                    className="px-5 py-3 bg-brand-sage text-white rounded-lg text-sm font-bold hover:bg-brand-sage/90 transition-all"
+                  >
+                    {imageUrl ? 'Ganti Foto' : 'Upload Foto'}
+                  </button>
+
+                  {imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setValue('imageUrl', '')}
+                      className="px-5 py-3 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-all"
+                    >
+                      Hapus Foto
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  type="hidden"
+                  {...register('imageUrl', { required: true })}
+                />
+
+                <p className="text-[11px] text-slate-400">
+                  Upload foto langsung dari perangkat. URL gambar disimpan otomatis.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -385,6 +554,22 @@ export default function AdminProducts() {
 
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                      Jumlah Stok
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      {...register('stock', { required: true })}
+                      placeholder="Contoh: 10"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-pink-dark outline-none transition-all text-sm"
+                    />
+                    <p className="text-[11px] text-slate-400">
+                      Stok 0 = Habis, stok 1–3 = Stok Menipis, stok di atas 3 = Ready.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
                       Kategori
                     </label>
                     <select
@@ -392,28 +577,12 @@ export default function AdminProducts() {
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-pink-dark outline-none transition-all text-sm"
                     >
                       <option value="">Pilih Kategori</option>
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
                       ))}
                     </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                      Status Ketersediaan
-                    </label>
-
-                    <div className="flex items-center gap-4 mt-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" value="true" {...register('isAvailable')} />
-                        <span className="text-sm font-medium text-slate-600">Ready</span>
-                      </label>
-
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" value="false" {...register('isAvailable')} />
-                        <span className="text-sm font-medium text-slate-600">Habis</span>
-                      </label>
-                    </div>
                   </div>
                 </div>
 
@@ -423,10 +592,13 @@ export default function AdminProducts() {
                       Label Khusus
                     </label>
                     <input
-                      {...register('label')}
-                      placeholder="Best Seller, Promo, Ready"
+                      {...register('labels')}
+                      placeholder="Best Seller, Promo, New Arrival"
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-pink-dark outline-none transition-all text-sm"
                     />
+                    <p className="text-[11px] text-slate-400">
+                      Pisahkan dengan koma. Contoh: Best Seller, Promo, New Arrival
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -437,8 +609,18 @@ export default function AdminProducts() {
                       {...register('dominantColor')}
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm"
                     >
-                      {['Bebas', 'Pink', 'Putih', 'Merah', 'Ungu', 'Biru', 'Kuning'].map(c => (
-                        <option key={c} value={c}>{c}</option>
+                      {[
+                        'Bebas',
+                        'Pink',
+                        'Putih',
+                        'Merah',
+                        'Ungu',
+                        'Biru',
+                        'Kuning'
+                      ].map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -451,9 +633,13 @@ export default function AdminProducts() {
                       {...register('budgetRange')}
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm"
                     >
-                      {['< 50k', '50k - 100k', '100k - 200k', '> 200k'].map(r => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
+                      {['< 50k', '50k - 100k', '100k - 200k', '> 200k'].map(
+                        (r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        )
+                      )}
                     </select>
                   </div>
 
@@ -499,7 +685,11 @@ export default function AdminProducts() {
                   disabled={saving}
                   className="flex-[2] px-6 py-3.5 bg-brand-pink-dark text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition-all disabled:opacity-70 disabled:cursor-wait"
                 >
-                  {saving ? 'Menyimpan...' : editingProduct ? 'Perbarui Produk' : 'Tambahkan Produk'}
+                  {saving
+                    ? 'Menyimpan...'
+                    : editingProduct
+                    ? 'Perbarui Produk'
+                    : 'Tambahkan Produk'}
                 </button>
               </div>
             </form>

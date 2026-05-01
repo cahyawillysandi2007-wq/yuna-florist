@@ -334,23 +334,9 @@ ${note || '-'}`;
       Tanggal Ambil/Kirim
     </label>
    <input
-  type="text"
+  type="date"
   value={pickupDate}
-  onChange={(e) => {
-    let value = e.target.value.replace(/\D/g, '');
-
-    if (value.length > 8) value = value.slice(0, 8);
-
-    if (value.length >= 5) {
-      value = `${value.slice(0, 2)}/${value.slice(2, 4)}/${value.slice(4)}`;
-    } else if (value.length >= 3) {
-      value = `${value.slice(0, 2)}/${value.slice(2)}`;
-    }
-
-    setPickupDate(value);
-  }}
-  placeholder="DD/MM/YYYY"
-  maxLength={10}
+  onChange={(e) => setPickupDate(e.target.value)}
   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark"
 />
   </div>

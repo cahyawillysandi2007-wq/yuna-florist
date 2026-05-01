@@ -251,10 +251,10 @@ export default function Home() {
 
       {/* Featured Products */}
       <section className="container mx-auto px-4 md:px-6">
-        <div className="bg-brand-pink/30 rounded-xl px-4 md:px-8 py-12 md:py-16">
-          <div className="flex items-end justify-between mb-10 text-center sm:text-left">
-            <div>
-              <h2 className="font-serif text-3xl font-bold text-slate-800">
+        <div className="bg-brand-pink/30 rounded-xl px-4 md:px-8 py-10 md:py-14 overflow-hidden">
+          <div className="flex items-end justify-between mb-8 text-center sm:text-left">
+            <div className="w-full sm:w-auto">
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-slate-800">
                 Koleksi Terbaru
               </h2>
               <p className="text-slate-500 text-sm mt-1">
@@ -271,26 +271,31 @@ export default function Home() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-white/50 animate-pulse rounded-lg aspect-[4/6]" />
+            <div className="flex gap-4 overflow-x-auto pb-3 -mx-1 px-1 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:overflow-visible">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="min-w-[230px] sm:min-w-0 bg-white/60 animate-pulse rounded-xl aspect-[4/6]"
+                />
               ))}
             </div>
           ) : products.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+            <div className="flex gap-4 overflow-x-auto pb-3 -mx-1 px-1 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:overflow-visible">
+              {products.slice(0, 4).map((product) => (
+                <div key={product.id} className="min-w-[230px] max-w-[230px] sm:min-w-0 sm:max-w-none">
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-20 bg-white/50 rounded-xl border border-dashed border-brand-pink-dark/20">
+            <div className="text-center py-16 bg-white/50 rounded-xl border border-dashed border-brand-pink-dark/20">
               <p className="text-slate-400 italic">
                 Belum ada produk untuk ditampilkan.
               </p>
             </div>
           )}
 
-          <div className="mt-10 block sm:hidden">
+          <div className="mt-8 block sm:hidden">
             <Link
               to="/catalog"
               className="w-full bg-white border border-brand-pink-dark/20 text-brand-pink-dark py-4 rounded-lg font-bold flex items-center justify-center gap-2"

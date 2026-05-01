@@ -1,18 +1,26 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import FloatingWA from './FloatingWA';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import FloatingWA from './FloatingWA';
 
 export default function Layout() {
+  const location = useLocation();
+
+  const hideFooter =
+    location.pathname.startsWith('/product/') ||
+    location.pathname === '/cart';
+    
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <>
       <Navbar />
-      <main className="flex-grow">
+
+      <main>
         <Outlet />
       </main>
-      <Footer />
-      <FloatingWA />
-    </div>
+
+      {!hideFooter && <Footer />}
+    </>
   );
 }

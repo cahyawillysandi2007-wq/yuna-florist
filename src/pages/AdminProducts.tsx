@@ -28,6 +28,7 @@ export default function AdminProducts() {
 
   const { register, handleSubmit, reset, watch, setValue } = useForm();
   const imageUrl = watch('imageUrl');
+  const priceValue = watch('price');
 
   useEffect(() => {
     loadData();
@@ -110,7 +111,13 @@ export default function AdminProducts() {
 
         if (result.event === 'success') {
           const uploadedImageUrl = result.info.secure_url;
-          setValue('imageUrl', uploadedImageUrl);
+
+          const optimizedImageUrl = uploadedImageUrl.replace(
+            '/upload/',
+            '/upload/f_auto,q_auto:good,w_1200,c_limit/'
+          );
+
+          setValue('imageUrl', optimizedImageUrl);
           alert('Foto berhasil diupload.');
         }
       }
@@ -127,7 +134,7 @@ export default function AdminProducts() {
 
       const productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> = {
         name: data.name,
-        price: Number(data.price),
+        price: Number(String(data.price).replace(/\D/g, '')),
         description: data.description || '',
         categoryId: data.categoryId,
         categoryName:
@@ -545,9 +552,18 @@ export default function AdminProducts() {
                       Harga (IDR)
                     </label>
                     <input
-                      type="number"
-                      {...register('price', { required: true })}
-                      placeholder="50000"
+                      type="text"
+                      inputMode="numeric"
+                      value={
+                        priceValue
+                          ? Number(String(priceValue).replace(/\D/g, '')).toLocaleString('id-ID')
+                          : ''
+                      }
+                      onChange={(e) => {
+                        const rawValue = e.target.value.replace(/\D/g, '');
+                        setValue('price', rawValue);
+                      }}
+                      placeholder="50.000"
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-pink-dark outline-none transition-all text-sm"
                     />
                   </div>

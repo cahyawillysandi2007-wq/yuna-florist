@@ -63,8 +63,12 @@ export default function AdminCategories() {
     try {
       const catData: Omit<Category, 'id'> = {
         name: data.name,
-        slug: data.slug || data.name.toLowerCase().replace(/\s+/g, '-'),
-        order: Number(data.order),
+        slug: data.name
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, ''),
+              order: Number(data.order),
         isActive: data.isActive === 'true' || data.isActive === true
       };
 
@@ -193,20 +197,10 @@ export default function AdminCategories() {
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Nama Kategori</label>
                     <input 
                       {...register('name', { required: true })}
-                      placeholder="e.g., Buket Wisuda"
+                      placeholder="Contoh: Buket Wisuda"
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-pink-dark outline-none transition-all text-sm"
                     />
                  </div>
-
-                 <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Slug (URL)</label>
-                    <input 
-                      {...register('slug')}
-                      placeholder="e.g., buket-wisuda"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-xs text-slate-400"
-                    />
-                 </div>
-
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Urutan Tampil</label>

@@ -15,6 +15,9 @@ import {
 import { auth } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { cn } from '../lib/utils';
+import { useEffect, useState } from 'react';
+import { StoreSettings } from '../types';
+import { storeSettingsService } from '../services/storeSettingsService';
 
 export default function AdminLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
@@ -29,6 +32,20 @@ export default function AdminLayout() {
       console.error('Logout failed', error);
     }
   };
+  const [settings, setSettings] = useState<StoreSettings | null>(null);
+
+    useEffect(() => {
+      async function loadSettings() {
+        try {
+          const data = await storeSettingsService.getSettings();
+          setSettings(data);
+        } catch (error) {
+          console.error('Gagal memuat admin settings:', error);
+        }
+      }
+
+      loadSettings();
+    }, []);
 
   const menuItems = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
@@ -106,12 +123,20 @@ export default function AdminLayout() {
 
           <div className="flex items-center gap-3">
              <div className="hidden sm:flex flex-col items-end mr-2">
-               <span className="text-sm font-semibold text-slate-700">Yuna Admin</span>
+               <span className="text-sm font-semibold text-slate-700">Admin</span>
                <span className="text-[10px] text-slate-400">Owner Florist</span>
              </div>
-             <div className="w-9 h-9 rounded-full bg-brand-pink-dark flex items-center justify-center text-white font-bold text-sm">
-               Y
-             </div>
+             {settings?.logoUrl ? (
+                <img
+                  src={settings.logoUrl}
+                  alt={settings.storeName || 'Logo Toko'}
+                  className="w-10 h-10 rounded-full object-contain bg-white border border-slate-100 p-1"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-brand-pink-dark text-white flex items-center justify-center font-bold">
+                  Y
+                </div>
+              )}
           </div>
         </header>
 

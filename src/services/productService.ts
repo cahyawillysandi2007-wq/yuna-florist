@@ -18,13 +18,13 @@ export const productService = {
   async getProducts() {
     const snapshot = await getDocs(collection(db, PRODUCTS_COLLECTION));
 
-    const products = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    const products = snapshot.docs.map((docItem) => ({
+      id: docItem.id,
+      ...docItem.data()
     } as Product));
 
     return products
-      .filter(product => product.isAvailable !== false)
+      .filter((product) => product.isAvailable !== false)
       .sort((a, b) => {
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
@@ -35,9 +35,9 @@ export const productService = {
   async getAllProducts() {
     const snapshot = await getDocs(collection(db, PRODUCTS_COLLECTION));
 
-    const products = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    const products = snapshot.docs.map((docItem) => ({
+      id: docItem.id,
+      ...docItem.data()
     } as Product));
 
     return products.sort((a, b) => {
@@ -49,7 +49,7 @@ export const productService = {
 
   async getProductsByCategory(categoryId: string) {
     const products = await this.getProducts();
-    return products.filter(product => product.categoryId === categoryId);
+    return products.filter((product) => product.categoryId === categoryId);
   },
 
   async getLatestProducts(count = 6) {
@@ -94,6 +94,48 @@ export const productService = {
     await deleteDoc(ref);
   },
 
+  async decreaseStock(productId: string, quantity: number) {
+    const ref = doc(db, PRODUCTS_COLLECTION, productId);
+
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(ref);
+
+      if (!snapshot.exists()) {
+        throw new Error('Produk tidak ditemukan.');
+      }
+
+      const product = snapshot.data() as Product;
+      const currentStock = Number(product.stock ?? 0);
+      const orderQuantity = Number(quantity || 1);
+
+      if (orderQuantity <= 0) {
+        throw new Error('Jumlah produk tidak valid.');
+      }
+
+      if (currentStock < orderQuantity) {
+        throw new Error(
+          `Stok ${product.name} tidak cukup. Tersisa ${currentStock}, diminta ${orderQuantity}.`
+        );
+      }
+
+      const newStock = currentStock - orderQuantity;
+
+      transaction.update(ref, {
+        stock: newStock,
+        isAvailable: newStock > 0,
+        updatedAt: serverTimestamp()
+      });
+
+      console.log('STOK DIKURANGI:', {
+        productId,
+        productName: product.name,
+        currentStock,
+        orderQuantity,
+        newStock
+      });
+    });
+  },
+
   async decreaseStocks(
     items: {
       productId: string;
@@ -101,48 +143,12 @@ export const productService = {
       name?: string;
     }[]
   ) {
-    await runTransaction(db, async (transaction) => {
-      const productRefs = items.map((item) =>
-        doc(db, PRODUCTS_COLLECTION, item.productId)
-      );
-
-      const productSnapshots = [];
-
-      for (const ref of productRefs) {
-        const snapshot = await transaction.get(ref);
-        productSnapshots.push(snapshot);
+    for (const item of items) {
+      if (!item.productId) {
+        throw new Error(`Produk ${item.name || ''} tidak punya ID.`);
       }
 
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const snapshot = productSnapshots[i];
-
-        if (!snapshot.exists()) {
-          throw new Error(`Produk ${item.name || ''} tidak ditemukan.`);
-        }
-
-        const product = snapshot.data() as Product;
-        const currentStock = Number(product.stock ?? 0);
-        const requestedQuantity = Number(item.quantity || 0);
-
-        if (requestedQuantity <= 0) {
-          throw new Error(`Jumlah produk ${product.name} tidak valid.`);
-        }
-
-        if (currentStock < requestedQuantity) {
-          throw new Error(
-            `Stok ${product.name} tidak cukup. Tersisa ${currentStock}, diminta ${requestedQuantity}.`
-          );
-        }
-
-        const newStock = currentStock - requestedQuantity;
-
-        transaction.update(productRefs[i], {
-          stock: newStock,
-          isAvailable: newStock > 0,
-          updatedAt: serverTimestamp()
-        });
-      }
-    });
+      await this.decreaseStock(item.productId, item.quantity);
+    }
   }
 };

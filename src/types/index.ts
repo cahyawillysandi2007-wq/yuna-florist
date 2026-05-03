@@ -7,7 +7,8 @@ export interface Product {
   categoryName: string;
   imageUrl: string;
   isAvailable: boolean;
-  label?: string; // Best Seller, Promo, Ready, Custom
+  labels?: string[];
+  stock?: number;
   eventTags: string[]; // Wisuda, Ulang Tahun, etc.
   budgetRange: string;
   dominantColor: string;
@@ -42,8 +43,9 @@ export interface StoreSettings {
   whatsappNumber: string;
   instagram: string;
   facebook: string;
+  tiktok?: string;
   address: string;
   openingHours: string;
   description: string;
-  logoUrl?: string;
+  logoUrl: string;
 }

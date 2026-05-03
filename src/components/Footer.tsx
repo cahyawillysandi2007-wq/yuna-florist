@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Flower2, Phone, MapPin, Clock, Instagram, Facebook } from 'lucide-react';
+import {
+  Flower2,
+  Phone,
+  MapPin,
+  Clock,
+  Instagram,
+  Facebook,
+  Music2
+} from 'lucide-react';
 import { StoreSettings } from '../types';
 import { storeSettingsService } from '../services/storeSettingsService';
 
@@ -24,11 +32,14 @@ export default function Footer() {
     whatsappNumber: '085768300253',
     instagram: 'yunafloristadiluwih',
     facebook: 'Yuna Florist Adiluwih',
+    tiktok: 'yunafloristadiluwih',
     address: 'Adiluwih, Pringsewu, Lampung',
     openingHours: '08:00 - 20:00',
     description: 'Buket cantik untuk momen spesial Anda.',
     logoUrl: ''
   };
+
+  const tiktokUsername = (data as any).tiktok || 'yunafloristadiluwih';
 
   return (
     <footer className="bg-white border-t border-brand-pink-dark/10 mt-16">
@@ -37,7 +48,11 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-3 mb-4">
               {data.logoUrl ? (
-                <img src={data.logoUrl} alt={data.storeName} className="w-10 h-10 rounded-lg object-cover" />
+                <img
+                  src={data.logoUrl}
+                  alt={data.storeName}
+                  className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-100 p-1"
+                />
               ) : (
                 <div className="w-10 h-10 rounded-lg bg-brand-pink flex items-center justify-center text-brand-pink-dark">
                   <Flower2 className="w-5 h-5" />
@@ -60,7 +75,9 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-sm font-bold text-slate-800 mb-4">Informasi Toko</h4>
+            <h4 className="text-sm font-bold text-slate-800 mb-4">
+              Informasi Toko
+            </h4>
 
             <div className="space-y-3 text-sm text-slate-500">
               <div className="flex gap-3">
@@ -81,7 +98,9 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-sm font-bold text-slate-800 mb-4">Sosial Media</h4>
+            <h4 className="text-sm font-bold text-slate-800 mb-4">
+              Sosial Media
+            </h4>
 
             <div className="space-y-3 text-sm text-slate-500">
               <div className="flex gap-3">
@@ -92,6 +111,11 @@ export default function Footer() {
               <div className="flex gap-3">
                 <Facebook className="w-4 h-4 text-brand-pink-dark shrink-0 mt-0.5" />
                 <span>{data.facebook}</span>
+              </div>
+
+              <div className="flex gap-3">
+                <Music2 className="w-4 h-4 text-brand-pink-dark shrink-0 mt-0.5" />
+                <span>{tiktokUsername}</span>
               </div>
             </div>
           </div>

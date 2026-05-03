@@ -4,6 +4,7 @@ import {
   Store,
   Phone,
   Instagram,
+  Facebook,
   Music2,
   MapPin,
   Clock,
@@ -38,7 +39,8 @@ export default function AdminSettings() {
             storeName: 'Yuna Florist Adiluwih',
             whatsappNumber: '085768300253',
             instagram: 'yunafloristadiluwih',
-            facebook: 'yunafloristadiluwih',
+            facebook: 'Yuna Florist Adiluwih',
+            tiktok: 'yunafloristadiluwih',
             address: 'Adiluwih, Pringsewu, Lampung',
             openingHours: '08:00 - 20:00',
             description: 'Buket cantik untuk momen spesial Anda.',
@@ -103,16 +105,17 @@ export default function AdminSettings() {
     setSuccess(false);
 
     try {
-      const settings: StoreSettings = {
-        storeName: data.storeName || 'Yuna Florist Adiluwih',
-        whatsappNumber: data.whatsappNumber || '085768300253',
-        instagram: data.instagram || '',
-        facebook: data.facebook || '',
-        address: data.address || '',
-        openingHours: data.openingHours || '',
-        description: data.description || '',
-        logoUrl: data.logoUrl || ''
-      };
+        const settings: StoreSettings = {
+          storeName: data.storeName || 'Yuna Florist Adiluwih',
+          whatsappNumber: data.whatsappNumber || '085768300253',
+          instagram: data.instagram || '',
+          facebook: data.facebook || '',
+          tiktok: data.tiktok || '',
+          address: data.address || '',
+          openingHours: data.openingHours || '',
+          description: data.description || '',
+          logoUrl: data.logoUrl || ''
+        };
 
       await setDoc(doc(db, 'store_settings', 'default'), settings);
 
@@ -225,10 +228,10 @@ export default function AdminSettings() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    <Instagram className="w-3.5 h-3.5" /> Instagram Username
+                    <Instagram className="w-3.5 h-3.5" /> Instagram
                   </label>
                   <input
                     {...register('instagram')}
@@ -239,16 +242,26 @@ export default function AdminSettings() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    <Music2 className="w-3.5 h-3.5" /> TikTok Username
+                    <Facebook className="w-3.5 h-3.5" /> Facebook
                   </label>
                   <input
                     {...register('facebook')}
+                    placeholder="Yuna Florist Adiluwih"
+                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-pink-dark outline-none text-sm"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <Music2 className="w-3.5 h-3.5" /> TikTok
+                  </label>
+                  <input
+                    {...register('tiktok')}
                     placeholder="yunafloristadiluwih"
                     className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-pink-dark outline-none text-sm"
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                   <MapPin className="w-3.5 h-3.5" /> Alamat Lengkap

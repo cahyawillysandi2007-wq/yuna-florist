@@ -70,7 +70,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
       </Link>
 
-      <div className="p-4 flex flex-col flex-grow">
+      <div className="p-3 sm:p-4 flex flex-col flex-grow">
         <div className="flex items-center gap-1.5 mb-2">
           <Tag className="w-3.5 h-3.5 text-brand-sage shrink-0" />
           <span className="text-[10px] text-brand-sage font-bold uppercase tracking-wider line-clamp-1">
@@ -82,7 +82,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           to={`/product/${product.id}`}
           className="block group-hover:text-brand-pink-dark transition-colors"
         >
-          <h3 className="font-serif font-bold text-slate-800 leading-snug text-lg line-clamp-2 min-h-[52px]">
+          <h3 className="font-serif font-bold text-slate-800 leading-snug text-base sm:text-lg line-clamp-2 min-h-[44px] sm:min-h-[52px]">
             {product.name}
           </h3>
         </Link>
@@ -103,7 +103,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           <Link
             to={`/product/${product.id}`}
-            className="w-10 h-10 border border-brand-pink-dark/20 flex items-center justify-center rounded-lg text-brand-pink-dark hover:bg-brand-pink-dark hover:text-white transition-all shadow-sm shrink-0"
+            className="relative block aspect-[4/4.6] sm:aspect-[4/5] overflow-hidden bg-slate-50"
           >
             <ChevronRight className="w-5 h-5" />
           </Link>

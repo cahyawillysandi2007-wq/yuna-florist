@@ -85,46 +85,66 @@ export default function AdminProducts() {
   };
 
   const openCloudinaryWidget = () => {
-    if (!window.cloudinary) {
-      alert('Cloudinary belum siap. Coba refresh halaman.');
-      return;
-    }
+  if (!window.cloudinary) {
+    alert('Cloudinary belum siap. Coba refresh halaman.');
+    return;
+  }
 
-    const widget = window.cloudinary.createUploadWidget(
-      {
-        cloudName: 'dblw16ds8',
-        uploadPreset: 'yuna_florist_upload',
-        folder: 'yuna-florist/products',
-        sources: ['local', 'camera'],
-        multiple: false,
-        cropping: false,
-        maxFiles: 1,
-        resourceType: 'image',
-        clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp']
-      },
-      (error: any, result: any) => {
-        if (error) {
-          console.error(error);
-          alert('Gagal upload gambar.');
-          return;
-        }
-
-        if (result.event === 'success') {
-          const uploadedImageUrl = result.info.secure_url;
-
-          const optimizedImageUrl = uploadedImageUrl.replace(
-            '/upload/',
-            '/upload/f_auto,q_auto:good,w_1200,c_limit/'
-          );
-
-          setValue('imageUrl', optimizedImageUrl);
-          alert('Foto berhasil diupload.');
-        }
+  const widget = window.cloudinary.createUploadWidget(
+    {
+      cloudName: 'dblw16ds8',
+      uploadPreset: 'yuna_florist_upload',
+      folder: 'yuna-florist/products',
+      sources: ['local', 'camera'],
+      multiple: false,
+      cropping: false,
+      maxFiles: 1,
+      resourceType: 'image',
+      clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp']
+    },
+    (error: any, result: any) => {
+      if (error) {
+        console.error(error);
+        return;
       }
-    );
 
-    widget.open();
-  };
+      if (result.event === 'success') {
+        const uploadedImageUrl = result.info.secure_url;
+
+        const optimizedImageUrl = uploadedImageUrl.replace(
+          '/upload/',
+          '/upload/f_auto,q_auto:good,w_1200,c_limit/'
+        );
+
+        setValue('imageUrl', optimizedImageUrl, {
+          shouldDirty: true,
+          shouldValidate: true
+        });
+
+        setTimeout(() => {
+          try {
+            widget.close();
+          } catch (e) {
+            console.log(e);
+          }
+
+          document.body.style.overflow = 'auto';
+
+          const activeElement = document.activeElement as HTMLElement | null;
+          activeElement?.blur();
+
+          const nameInput = document.querySelector(
+            'input[name="name"]'
+          ) as HTMLInputElement | null;
+
+          nameInput?.focus();
+        }, 300);
+      }
+    }
+  );
+
+  widget.open();
+};
 
   const onSubmit = async (data: any) => {
     setSaving(true);

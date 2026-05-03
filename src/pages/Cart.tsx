@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft, MessageCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { formatPrice, generateWhatsAppLink, generateOrderCode } from '../lib/utils';
 import { orderService } from '../services/orderService';
 import { storeSettingsService } from '../services/storeSettingsService';
+import { productService } from '../services/productService';
 
 export default function Cart() {
   const {
@@ -23,6 +24,7 @@ export default function Cart() {
   const [note, setNote] = useState('');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [successOrderCode, setSuccessOrderCode] = useState('');
+  const checkoutLockRef = useRef(false);
   
   const formatDateID = (dateString: string) => {
   if (!dateString) return '-';
@@ -35,8 +37,13 @@ export default function Cart() {
 
   return `${day}/${month}/${year}`;
 };
+
   const handleCheckout = async (e: React.FormEvent) => {
   e.preventDefault();
+
+  if (checkoutLockRef.current) return;
+
+  checkoutLockRef.current = true;
 
   if (items.length === 0) {
     alert('Keranjang masih kosong.');
@@ -51,6 +58,17 @@ export default function Cart() {
   setCheckoutLoading(true);
 
   try {
+  alert('Klik OK untuk konfirmasi.');
+  console.log('ITEMS YANG AKAN DIKURANGI:', items);
+
+  await productService.decreaseStocks(
+    items.map((item: any) => ({
+      productId: item.productId || item.id,
+      quantity: Number(item.quantity || 1),
+      name: item.name
+    }))
+  );
+
     const settings = await storeSettingsService.getSettings();
 
     const productListText = items
@@ -63,14 +81,16 @@ export default function Cart() {
       .join('\n\n');
 
     const orderNote = note || '-';
-
     const firstItem = items[0];
 
     const orderId = await orderService.createOrder({
       customerName,
       customerWhatsapp,
       productId: firstItem.productId,
-      productName: items.length === 1 ? firstItem.name : `${items.length} Produk dalam Keranjang`,
+      productName:
+        items.length === 1
+          ? firstItem.name
+          : `${items.length} Produk dalam Keranjang`,
       productPrice: totalPrice,
       note: orderNote,
       pickupDate: formatDateID(pickupDate),
@@ -104,13 +124,13 @@ ${note || '-'}`;
     setNote('');
 
     window.open(waLink, '_blank');
-
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    alert('Gagal checkout. Cek koneksi Firebase atau Firestore Rules.');
+    alert(error.message || 'Gagal checkout. Stok mungkin tidak cukup atau koneksi bermasalah.');
   } finally {
-    setCheckoutLoading(false);
-  }
+  checkoutLockRef.current = false;
+  setCheckoutLoading(false);
+}
 };
 
   if (successOrderCode) {
@@ -355,13 +375,13 @@ ${note || '-'}`;
   </div>
 
   <button
-    type="submit"
-    disabled={checkoutLoading}
-    className="w-full bg-brand-pink-dark text-white py-3.5 rounded-lg font-bold hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-  >
-    <MessageCircle className="w-5 h-5" />
-    {checkoutLoading ? 'Memproses...' : 'Checkout via WhatsApp'}
-  </button>
+  type="submit"
+  disabled={checkoutLoading}
+  className="w-full bg-brand-pink-dark text-white py-3.5 rounded-lg font-bold hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+>
+  <MessageCircle className="w-5 h-5" />
+  {checkoutLoading ? 'Memproses...' : 'Checkout via WhatsApp'}
+</button>
 
   <p className="text-[11px] text-slate-400 text-center">
     Pesanan akan masuk ke admin dan pelanggan diarahkan ke WhatsApp owner.

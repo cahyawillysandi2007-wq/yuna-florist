@@ -1,6 +1,13 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft, MessageCircle } from 'lucide-react';
+import {
+  ShoppingCart,
+  Trash2,
+  Plus,
+  Minus,
+  ArrowLeft,
+  MessageCircle
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { formatPrice, generateWhatsAppLink, generateOrderCode } from '../lib/utils';
 import { orderService } from '../services/orderService';
@@ -22,89 +29,170 @@ export default function Cart() {
   const [customerWhatsapp, setCustomerWhatsapp] = useState('');
   const [pickupDate, setPickupDate] = useState('');
   const [note, setNote] = useState('');
+  const [orderMethod, setOrderMethod] = useState<'pickup' | 'delivery'>('pickup');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerLocation, setCustomerLocation] = useState('');
+  const [gettingLocation, setGettingLocation] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [successOrderCode, setSuccessOrderCode] = useState('');
+
   const checkoutLockRef = useRef(false);
-  
+  const orderSummaryRef = useRef<HTMLDivElement | null>(null);
+  const cartItemsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (items.length > 0 && orderSummaryRef.current) {
+      setTimeout(() => {
+        orderSummaryRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 300);
+    }
+  }, [items.length]);
+
   const formatDateID = (dateString: string) => {
-  if (!dateString) return '-';
+    if (!dateString) return '-';
 
-  if (dateString.includes('/')) return dateString;
+    if (dateString.includes('/')) return dateString;
 
-  const [year, month, day] = dateString.split('-');
+    const [year, month, day] = dateString.split('-');
 
-  if (!year || !month || !day) return dateString;
+    if (!year || !month || !day) return dateString;
 
-  return `${day}/${month}/${year}`;
-};
+    return `${day}/${month}/${year}`;
+  };
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Browser tidak mendukung fitur lokasi.');
+      return;
+    }
+
+    setGettingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+        setCustomerLocation(mapsLink);
+        setGettingLocation(false);
+
+        alert('Lokasi berhasil diambil.');
+      },
+      (error) => {
+        console.error(error);
+        setGettingLocation(false);
+
+        alert('Gagal mengambil lokasi. Pastikan izin lokasi diaktifkan.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
 
   const handleCheckout = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (checkoutLockRef.current) return;
+    if (checkoutLockRef.current) return;
 
-  checkoutLockRef.current = true;
+    if (items.length === 0) {
+      alert('Keranjang masih kosong.');
+      return;
+    }
 
-  if (items.length === 0) {
-    alert('Keranjang masih kosong.');
-    return;
-  }
+    if (!customerName || !customerWhatsapp) {
+      alert('Nama dan nomor WhatsApp wajib diisi.');
+      return;
+    }
 
-  if (!customerName || !customerWhatsapp || !pickupDate) {
-    alert('Nama, nomor WhatsApp, dan tanggal ambil/kirim wajib diisi.');
-    return;
-  }
+    if (orderMethod === 'pickup' && !pickupDate) {
+      alert('Tanggal ambil wajib diisi.');
+      return;
+    }
 
-  setCheckoutLoading(true);
+    if (orderMethod === 'delivery' && !customerAddress) {
+      alert('Alamat pengiriman wajib diisi.');
+      return;
+    }
 
-  try {
-  alert('Klik OK untuk konfirmasi.');
-  console.log('ITEMS YANG AKAN DIKURANGI:', items);
+    checkoutLockRef.current = true;
+    setCheckoutLoading(true);
 
-  await productService.decreaseStocks(
-    items.map((item: any) => ({
-      productId: item.productId || item.id,
-      quantity: Number(item.quantity || 1),
-      name: item.name
-    }))
-  );
+    try {
+      await productService.decreaseStocks(
+        items.map((item: any) => ({
+          productId: item.productId || item.id,
+          quantity: Number(item.quantity || 1),
+          name: item.name
+        }))
+      );
 
-    const settings = await storeSettingsService.getSettings();
+      const settings = await storeSettingsService.getSettings();
 
-    const productListText = items
-      .map((item, index) => {
-        return `${index + 1}. ${item.name}
+      const productListText = items
+        .map((item, index) => {
+          return `${index + 1}. ${item.name}
    Jumlah: ${item.quantity}
    Harga: ${formatPrice(item.price)}
    Subtotal: ${formatPrice(item.price * item.quantity)}`;
-      })
-      .join('\n\n');
+        })
+        .join('\n\n');
 
-    const orderNote = note || '-';
-    const firstItem = items[0];
+      const methodText =
+        orderMethod === 'pickup' ? 'Ambil di Tempat' : 'Dikirim / COD';
 
-    const orderId = await orderService.createOrder({
-      customerName,
-      customerWhatsapp,
-      productId: firstItem.productId,
-      productName:
-        items.length === 1
-          ? firstItem.name
-          : `${items.length} Produk dalam Keranjang`,
-      productPrice: totalPrice,
-      note: orderNote,
-      pickupDate: formatDateID(pickupDate),
-      status: 'New'
-    });
+      const deliveryInfo =
+        orderMethod === 'delivery'
+          ? `
+Metode Pesanan: ${methodText}
+Info Pengiriman: Pengiriman dilakukan 1 hari setelah checkout. Ongkir ditanggung oleh pembeli dan akan dikonfirmasi kembali melalui WhatsApp.
+Alamat Pengiriman: ${customerAddress}
+Link Lokasi: ${customerLocation || '-'}`
+          : `
+Metode Pesanan: ${methodText}
+Tanggal Ambil: ${formatDateID(pickupDate)}`;
 
-    const newOrderCode = generateOrderCode(orderId);
-    setSuccessOrderCode(newOrderCode);
+      const orderNote = `${note || '-'}${deliveryInfo}`;
+      const firstItem = items[0];
 
-    const whatsappMessage = `Halo kak, saya ingin pesan produk dari ${settings.storeName}.
+      const orderId = await orderService.createOrder({
+        customerName,
+        customerWhatsapp,
+        productId: firstItem.productId,
+        productName:
+          items.length === 1
+            ? firstItem.name
+            : `${items.length} Produk dalam Keranjang`,
+        productPrice: totalPrice,
+        note: orderNote,
+        pickupDate: orderMethod === 'pickup' ? formatDateID(pickupDate) : '-',
+        status: 'New'
+      });
+
+      const newOrderCode = generateOrderCode(orderId);
+      setSuccessOrderCode(newOrderCode);
+
+      const whatsappMessage = `Halo kak, saya ingin pesan produk dari ${settings.storeName}.
 
 Nama Pemesan: ${customerName}
 No WhatsApp: ${customerWhatsapp}
-Tanggal Ambil/Kirim: ${formatDateID(pickupDate)}
+Metode Pesanan: ${methodText}
+${
+  orderMethod === 'pickup'
+    ? `Tanggal Ambil: ${formatDateID(pickupDate)}`
+    : 'Info Pengiriman: Pengiriman dilakukan 1 hari setelah checkout. Ongkir ditanggung oleh pembeli dan akan dikonfirmasi kembali melalui WhatsApp.'
+}
+${
+  orderMethod === 'delivery'
+    ? `Alamat Pengiriman: ${customerAddress}
+Link Lokasi: ${customerLocation || '-'}`
+    : ''
+}
 
 Produk:
 ${productListText}
@@ -114,76 +202,82 @@ Total: ${formatPrice(totalPrice)}
 Catatan:
 ${note || '-'}`;
 
-    const waLink = generateWhatsAppLink(settings.whatsappNumber, whatsappMessage);
+      const waLink = generateWhatsAppLink(settings.whatsappNumber, whatsappMessage);
 
-    clearCart();
+      clearCart();
 
-    setCustomerName('');
-    setCustomerWhatsapp('');
-    setPickupDate('');
-    setNote('');
+      setCustomerName('');
+      setCustomerWhatsapp('');
+      setPickupDate('');
+      setNote('');
+      setOrderMethod('pickup');
+      setCustomerAddress('');
+      setCustomerLocation('');
 
-    window.open(waLink, '_blank');
-  } catch (error: any) {
-    console.error(error);
-    alert(error.message || 'Gagal checkout. Stok mungkin tidak cukup atau koneksi bermasalah.');
-  } finally {
-  checkoutLockRef.current = false;
-  setCheckoutLoading(false);
-}
-};
+      window.open(waLink, '_blank');
+    } catch (error: any) {
+      console.error(error);
+      alert(
+        error.message ||
+          'Gagal checkout. Stok mungkin tidak cukup atau koneksi bermasalah.'
+      );
+    } finally {
+      checkoutLockRef.current = false;
+      setCheckoutLoading(false);
+    }
+  };
 
   if (successOrderCode) {
-  return (
-    <div className="container mx-auto px-4 md:px-6 py-10 min-h-screen">
-      <div className="max-w-xl mx-auto bg-white rounded-xl shadow-soft border border-slate-100 p-8 text-center">
-        <div className="w-16 h-16 rounded-lg bg-green-100 flex items-center justify-center mx-auto mb-5">
-          <span className="text-3xl">✓</span>
-        </div>
+    return (
+      <div className="container mx-auto px-4 md:px-6 py-10 min-h-screen">
+        <div className="max-w-xl mx-auto bg-white rounded-xl shadow-soft border border-slate-100 p-8 text-center">
+          <div className="w-16 h-16 rounded-lg bg-green-100 flex items-center justify-center mx-auto mb-5">
+            <span className="text-3xl">✓</span>
+          </div>
 
-        <h1 className="font-serif text-3xl font-bold text-slate-800 mb-2">
-          Pesanan Berhasil Dibuat
-        </h1>
+          <h1 className="font-serif text-3xl font-bold text-slate-800 mb-2">
+            Pesanan Berhasil Dibuat
+          </h1>
 
-        <p className="text-sm text-slate-500 mb-6">
-          Simpan kode pesanan ini untuk cek status pesanan Anda.
-        </p>
-
-        <div className="bg-brand-pink border border-brand-pink-dark/20 rounded-xl p-5 mb-5">
-          <p className="text-xs font-bold text-brand-pink-dark uppercase tracking-widest mb-2">
-            Kode Pesanan
+          <p className="text-sm text-slate-500 mb-6">
+            Simpan kode pesanan ini untuk cek status pesanan Anda.
           </p>
 
-          <p className="text-3xl font-black text-slate-800 tracking-wider">
-            {successOrderCode}
+          <div className="bg-brand-pink border border-brand-pink-dark/20 rounded-xl p-5 mb-5">
+            <p className="text-xs font-bold text-brand-pink-dark uppercase tracking-widest mb-2">
+              Kode Pesanan
+            </p>
+
+            <p className="text-3xl font-black text-slate-800 tracking-wider">
+              {successOrderCode}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(successOrderCode);
+              alert('Kode pesanan berhasil disalin.');
+            }}
+            className="w-full bg-brand-sage text-white py-3.5 rounded-lg font-bold hover:bg-brand-sage/90 transition-all mb-3"
+          >
+            Salin Kode Pesanan
+          </button>
+
+          <a
+            href="/orders"
+            className="block w-full bg-brand-pink-dark text-white py-3.5 rounded-lg font-bold hover:opacity-90 transition-all"
+          >
+            Cek Status Pesanan
+          </a>
+
+          <p className="text-[11px] text-slate-400 mt-4">
+            Kode ini juga akan digunakan sebagai nomor pesanan.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            navigator.clipboard.writeText(successOrderCode);
-            alert('Kode pesanan berhasil disalin.');
-          }}
-          className="w-full bg-brand-sage text-white py-3.5 rounded-lg font-bold hover:bg-brand-sage/90 transition-all mb-3"
-        >
-          Salin Kode Pesanan
-        </button>
-
-        <a
-          href="/orders"
-          className="block w-full bg-brand-pink-dark text-white py-3.5 rounded-lg font-bold hover:opacity-90 transition-all"
-        >
-          Cek Status Pesanan
-        </a>
-
-        <p className="text-[11px] text-slate-400 mt-4">
-          Kode ini juga akan digunakan sebagai nomor pesanan.
-        </p>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -224,10 +318,10 @@ ${note || '-'}`;
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
+          <div ref={cartItemsRef} className="lg:col-span-2 space-y-4">
             <div>
               <h1 className="font-serif text-3xl font-bold text-slate-800">
-                Keranjang
+                Keranjang Saya
               </h1>
               <p className="text-sm text-slate-500">
                 Ada {totalItems} item di keranjang Anda.
@@ -302,7 +396,7 @@ ${note || '-'}`;
             </button>
           </div>
 
-          <div className="lg:col-span-1">
+          <div ref={orderSummaryRef} className="lg:col-span-1 scroll-mt-24">
             <div className="bg-white rounded-xl shadow-soft border border-slate-100 p-6 lg:sticky lg:top-24">
               <h2 className="font-bold text-slate-800 text-lg mb-4">
                 Ringkasan Pesanan
@@ -323,74 +417,212 @@ ${note || '-'}`;
               </div>
 
               <form onSubmit={handleCheckout} className="mt-5 space-y-3">
-  <div>
-    <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">
-      Nama Pemesan
-    </label>
-    <input
-      type="text"
-      value={customerName}
-      onChange={(e) => setCustomerName(e.target.value)}
-      placeholder="Nama lengkap"
-      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark"
-    />
-  </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">
+                    Nama Pemesan
+                  </label>
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Nama lengkap"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark"
+                  />
+                </div>
 
-  <div>
-    <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">
-      Nomor WhatsApp
-    </label>
-    <input
-      type="text"
-      value={customerWhatsapp}
-      onChange={(e) => setCustomerWhatsapp(e.target.value)}
-      placeholder="08xxxxxxxxxx"
-      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark"
-    />
-  </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">
+                    Nomor WhatsApp
+                  </label>
+                  <input
+                    type="text"
+                    value={customerWhatsapp}
+                    onChange={(e) => setCustomerWhatsapp(e.target.value)}
+                    placeholder="08xxxxxxxxxx"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark"
+                  />
+                </div>
 
-  <div>
-    <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">
-      Tanggal Ambil/Kirim
-    </label>
-   <input
-  type="date"
-  value={pickupDate}
-  onChange={(e) => setPickupDate(e.target.value)}
-  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark"
-/>
-  </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase mb-2">
+                    Metode Pesanan
+                  </label>
 
-  <div>
-    <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">
-      Catatan Tambahan
-    </label>
-    <textarea
-      value={note}
-      onChange={(e) => setNote(e.target.value)}
-      placeholder="Contoh: warna pink soft, tulisan ucapan, jam ambil..."
-      rows={3}
-      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark resize-none"
-    />
-  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOrderMethod('pickup')}
+                      className={`px-3 py-3 rounded-lg border text-sm font-bold transition-all ${
+                        orderMethod === 'pickup'
+                          ? 'bg-brand-pink-dark text-white border-brand-pink-dark'
+                          : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      Ambil di Tempat
+                    </button>
 
-  <button
-  type="submit"
-  disabled={checkoutLoading}
-  className="w-full bg-brand-pink-dark text-white py-3.5 rounded-lg font-bold hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
->
-  <MessageCircle className="w-5 h-5" />
-  {checkoutLoading ? 'Memproses...' : 'Checkout via WhatsApp'}
-</button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOrderMethod('delivery');
+                        setPickupDate('');
+                      }}
+                      className={`px-3 py-3 rounded-lg border text-sm font-bold transition-all ${
+                        orderMethod === 'delivery'
+                          ? 'bg-brand-pink-dark text-white border-brand-pink-dark'
+                          : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      Dikirim / COD
+                    </button>
+                  </div>
+                </div>
 
-  <p className="text-[11px] text-slate-400 text-center">
-    Pesanan akan masuk ke admin dan pelanggan diarahkan ke WhatsApp owner.
-  </p>
-</form>
+                {orderMethod === 'pickup' ? (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">
+                      Tanggal Ambil
+                    </label>
+
+                    <input
+                      type="date"
+                      value={pickupDate}
+                      onChange={(e) => setPickupDate(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-brand-pink-dark/10 bg-brand-pink/20 p-4">
+                    <p className="text-sm font-bold text-slate-700 mb-3">
+                      Estimasi Pengiriman
+                    </p>
+
+                    <ul className="space-y-2 text-xs text-slate-600">
+                      <li className="flex items-start gap-2">
+                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-brand-pink-dark shrink-0" />
+                        <span>Pengiriman dilakukan 1 hari setelah checkout.</span>
+                      </li>
+
+                      <li className="flex items-start gap-2">
+                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-brand-pink-dark shrink-0" />
+                        <span>Ongkir ditanggung oleh pembeli.</span>
+                      </li>
+
+                      <li className="flex items-start gap-2">
+                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-brand-pink-dark shrink-0" />
+                        <span>
+                          Biaya ongkir akan dikonfirmasi kembali melalui WhatsApp.
+                        </span>
+                      </li>
+
+                      <li className="flex items-start gap-2">
+                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-brand-pink-dark shrink-0" />
+                        <span>Pastikan alamat dan lokasi yang dikirim sudah benar.</span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+
+                {orderMethod === 'delivery' && (
+                  <div className="space-y-3 rounded-lg border border-brand-pink-dark/10 bg-brand-pink/20 p-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">
+                        Alamat Pengiriman
+                      </label>
+
+                      <textarea
+                        value={customerAddress}
+                        onChange={(e) => setCustomerAddress(e.target.value)}
+                        placeholder="Contoh: Dusun 2, RT/RW, patokan rumah, kecamatan..."
+                        rows={3}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={handleGetLocation}
+                        disabled={gettingLocation}
+                        className="w-full bg-brand-sage text-white py-3 rounded-lg text-sm font-bold hover:bg-brand-sage/90 transition-all disabled:opacity-60"
+                      >
+                        {gettingLocation ? 'Mengambil Lokasi...' : 'Ambil Lokasi Saya'}
+                      </button>
+
+                      {customerLocation && (
+                        <p className="text-[11px] text-green-600 font-medium mt-2 break-all">
+                          Lokasi berhasil ditambahkan: {customerLocation}
+                        </p>
+                      )}
+
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Link lokasi akan ikut terkirim ke WhatsApp owner.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">
+                    Catatan Tambahan
+                  </label>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Contoh: warna pink soft, tulisan ucapan, jam ambil..."
+                    rows={3}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-brand-pink-dark resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={checkoutLoading}
+                  className="w-full bg-brand-pink-dark text-white py-3.5 rounded-lg font-bold hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  {checkoutLoading ? 'Memproses...' : 'Checkout via WhatsApp'}
+                </button>
+
+                <p className="text-[11px] text-slate-400 text-center">
+                  Pesanan akan masuk ke admin dan pelanggan diarahkan ke WhatsApp
+                  owner.
+                </p>
+              </form>
+
               <p className="text-[11px] text-slate-400 text-center mt-3">
                 Setelah checkout, pesanan akan masuk ke admin dan WhatsApp owner.
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                cartItemsRef.current?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start'
+                });
+              }}
+              className="mx-auto mt-3 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-brand-sage transition-all duration-300 hover:-translate-y-1"
+              title="Kembali ke daftar produk"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 shadow-md backdrop-blur-sm border border-slate-200/70">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                </svg>
+              </span>
+
+              <span className="text-xs font-medium tracking-wide">
+                Kembali ke Produk
+              </span>
+            </button>
           </div>
         </div>
       </div>

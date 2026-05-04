@@ -146,18 +146,13 @@ export default function Cart() {
       const methodText =
         orderMethod === 'pickup' ? 'Ambil di Tempat' : 'Dikirim / COD';
 
-      const deliveryInfo =
+      const deliveryInfoText =
         orderMethod === 'delivery'
-          ? `
-Metode Pesanan: ${methodText}
-Info Pengiriman: Pengiriman dilakukan 1 hari setelah checkout. Ongkir ditanggung oleh pembeli dan akan dikonfirmasi kembali melalui WhatsApp.
+          ? `Info Pengiriman: Pengiriman dilakukan 1 hari setelah checkout. Ongkir ditanggung oleh pembeli dan akan dikonfirmasi kembali melalui WhatsApp.
 Alamat Pengiriman: ${customerAddress}
 Link Lokasi: ${customerLocation || '-'}`
-          : `
-Metode Pesanan: ${methodText}
-Tanggal Ambil: ${formatDateID(pickupDate)}`;
+          : `Tanggal Ambil: ${formatDateID(pickupDate)}`;
 
-      const orderNote = `${note || '-'}${deliveryInfo}`;
       const firstItem = items[0];
 
       const orderId = await orderService.createOrder({
@@ -169,10 +164,18 @@ Tanggal Ambil: ${formatDateID(pickupDate)}`;
             ? firstItem.name
             : `${items.length} Produk dalam Keranjang`,
         productPrice: totalPrice,
-        note: orderNote,
+
+        // Catatan hanya isi catatan tambahan pembeli
+        note: note.trim() || '',
+
+        // Data detail pesanan disimpan terpisah
+        orderMethod: methodText,
         pickupDate: orderMethod === 'pickup' ? formatDateID(pickupDate) : '-',
+        deliveryAddress: orderMethod === 'delivery' ? customerAddress.trim() : '',
+        deliveryLocationUrl: orderMethod === 'delivery' ? customerLocation : '',
+
         status: 'New'
-      });
+      } as any);
 
       const newOrderCode = generateOrderCode(orderId);
       setSuccessOrderCode(newOrderCode);
@@ -182,17 +185,7 @@ Tanggal Ambil: ${formatDateID(pickupDate)}`;
 Nama Pemesan: ${customerName}
 No WhatsApp: ${customerWhatsapp}
 Metode Pesanan: ${methodText}
-${
-  orderMethod === 'pickup'
-    ? `Tanggal Ambil: ${formatDateID(pickupDate)}`
-    : 'Info Pengiriman: Pengiriman dilakukan 1 hari setelah checkout. Ongkir ditanggung oleh pembeli dan akan dikonfirmasi kembali melalui WhatsApp.'
-}
-${
-  orderMethod === 'delivery'
-    ? `Alamat Pengiriman: ${customerAddress}
-Link Lokasi: ${customerLocation || '-'}`
-    : ''
-}
+${deliveryInfoText}
 
 Produk:
 ${productListText}

@@ -10,13 +10,15 @@ import {
   Trash2,
   Download,
   Copy,
-  MessageCircle
+  MessageCircle,
+  MapPin,
+  Truck,
+  CalendarDays,
+  StickyNote
 } from 'lucide-react';
 import { orderService } from '../services/orderService';
 import { Order } from '../types';
 import { formatPrice, cn, generateOrderCode } from '../lib/utils';
-import { format } from 'date-fns';
-import { id as idLocale } from 'date-fns/locale';
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -49,6 +51,36 @@ export default function AdminOrders() {
     }
 
     return '-';
+  };
+
+  const getOrderMethod = (order: any) => {
+    return order.orderMethod || 'Ambil di Tempat';
+  };
+
+  const getCleanNote = (order: any) => {
+    const rawNote = String(order.note || '').trim();
+
+    if (!rawNote || rawNote === '-') return '';
+
+    const blockedKeywords = [
+      'Metode Pesanan:',
+      'Tanggal Ambil:',
+      'Info Pengiriman:',
+      'Alamat Pengiriman:',
+      'Link Lokasi:'
+    ];
+
+    const lines = rawNote
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => !blockedKeywords.some((keyword) => line.includes(keyword)));
+
+    const cleanText = lines.join('\n').trim();
+
+    if (!cleanText || cleanText === '-') return '';
+
+    return cleanText;
   };
 
   const handleStatusChange = async (id: string, newStatus: Order['status']) => {
@@ -135,7 +167,7 @@ export default function AdminOrders() {
   };
 
   const formatPickupDate = (dateString?: string) => {
-    if (!dateString) return '-';
+    if (!dateString || dateString === '-') return '-';
 
     if (dateString.includes('/')) return dateString;
 
@@ -189,6 +221,8 @@ Silakan konfirmasi untuk pengambilan/pengiriman pesanan. Terima kasih.`;
 
   const handleDownloadReceipt = (order: any) => {
     const orderCode = getSafeOrderCode(order);
+    const orderMethod = getOrderMethod(order);
+    const cleanNote = getCleanNote(order);
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -196,7 +230,7 @@ Silakan konfirmasi untuk pengambilan/pengiriman pesanan. Terima kasih.`;
     if (!ctx) return;
 
     canvas.width = 900;
-    canvas.height = 1300;
+    canvas.height = 1350;
 
     const formatCanvasDate = () => {
       const now = new Date();
@@ -268,7 +302,7 @@ Silakan konfirmasi untuk pengambilan/pengiriman pesanan. Terima kasih.`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = '#FFFFFF';
-    drawRoundRect(55, 55, 790, 1190, 26);
+    drawRoundRect(55, 55, 790, 1240, 26);
 
     ctx.fillStyle = '#C95F7C';
     drawRoundRect(55, 55, 790, 190, 26);
@@ -333,32 +367,41 @@ Silakan konfirmasi untuk pengambilan/pengiriman pesanan. Terima kasih.`;
     ctx.stroke();
 
     drawLabelValue('Produk', order.productName, 95, 720);
-    drawLabelValue('Ambil/Kirim', formatPickupDate(order.pickupDate), 480, 720);
+    drawLabelValue('Metode', orderMethod, 480, 720);
 
     drawLabelValue('Status', getStatusLabel(order.status), 95, 830);
     drawLabelValue('Total Harga', formatPrice(order.productPrice), 480, 830);
 
+    drawLabelValue(
+      orderMethod === 'Dikirim / COD' ? 'Pengiriman' : 'Tanggal Ambil',
+      orderMethod === 'Dikirim / COD'
+        ? '1 hari setelah checkout'
+        : formatPickupDate(order.pickupDate),
+      95,
+      940
+    );
+
     ctx.fillStyle = '#F8FAFC';
-    drawRoundRect(95, 920, 710, 145, 16);
+    drawRoundRect(95, 1030, 710, 120, 16);
 
     ctx.fillStyle = '#8A8A8A';
     ctx.font = 'bold 18px Arial';
-    ctx.fillText('CATATAN', 125, 960);
+    ctx.fillText('CATATAN', 125, 1070);
 
     ctx.fillStyle = '#1E293B';
     ctx.font = '21px Arial';
-    drawWrappedText(order.note || '-', 125, 1000, 650, 30);
+    drawWrappedText(cleanNote || '-', 125, 1110, 650, 30);
 
     ctx.fillStyle = '#FDF2F4';
-    drawRoundRect(95, 1105, 710, 95, 16);
+    drawRoundRect(95, 1185, 710, 85, 16);
 
     ctx.fillStyle = '#C95F7C';
     ctx.font = 'bold 22px Arial';
-    ctx.fillText('Terima kasih sudah memesan di Yuna Florist', 125, 1145);
+    ctx.fillText('Terima kasih sudah memesan di Yuna Florist', 125, 1225);
 
     ctx.fillStyle = '#64748B';
     ctx.font = '18px Arial';
-    ctx.fillText('Simpan nota ini sebagai bukti pesanan Anda.', 125, 1175);
+    ctx.fillText('Simpan nota ini sebagai bukti pesanan Anda.', 125, 1253);
 
     ctx.fillStyle = '#94A3B8';
     ctx.font = '15px Arial';
@@ -367,7 +410,7 @@ Silakan konfirmasi untuk pengambilan/pengiriman pesanan. Terima kasih.`;
     ctx.fillText(
       'WA: 085768300253 • IG: Yuna Florist Adiluwih • TT: Yuna Florist Adiluwih',
       canvas.width / 2,
-      1230
+      1310
     );
 
     ctx.textAlign = 'left';
@@ -402,7 +445,15 @@ Silakan konfirmasi untuk pengambilan/pengiriman pesanan. Terima kasih.`;
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar w-full md:w-auto">
-          {['all', 'New', 'Processing', 'Completed', 'CancelRequested', 'CancelRejected', 'Cancelled'].map((status) => (
+          {[
+            'all',
+            'New',
+            'Processing',
+            'Completed',
+            'CancelRequested',
+            'CancelRejected',
+            'Cancelled'
+          ].map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
@@ -427,6 +478,8 @@ Silakan konfirmasi untuk pengambilan/pengiriman pesanan. Terima kasih.`;
         ) : filteredOrders.length > 0 ? (
           filteredOrders.map((order: any) => {
             const orderCode = getSafeOrderCode(order);
+            const orderMethod = getOrderMethod(order);
+            const cleanNote = getCleanNote(order);
 
             return (
               <div
@@ -489,7 +542,9 @@ Silakan konfirmasi untuk pengambilan/pengiriman pesanan. Terima kasih.`;
                     <div className="flex items-center gap-3">
                       <Phone className="w-4 h-4 text-slate-300" />
                       <a
-                        href={`https://wa.me/${formatWhatsAppNumber(order.customerWhatsapp)}`}
+                        href={`https://wa.me/${formatWhatsAppNumber(
+                          order.customerWhatsapp
+                        )}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs font-bold text-blue-500 hover:underline flex items-center gap-1"
@@ -499,19 +554,68 @@ Silakan konfirmasi untuk pengambilan/pengiriman pesanan. Terima kasih.`;
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <Clock className="w-4 h-4 text-slate-300" />
+                      <Truck className="w-4 h-4 text-slate-300" />
                       <span className="text-xs font-medium text-slate-500">
-                        Tanggal Ambil/Kirim: {formatPickupDate(order.pickupDate)}
+                        Metode Pesanan: {orderMethod}
                       </span>
                     </div>
+
+                    {orderMethod === 'Ambil di Tempat' && (
+                      <div className="flex items-center gap-3">
+                        <CalendarDays className="w-4 h-4 text-slate-300" />
+                        <span className="text-xs font-medium text-slate-500">
+                          Tanggal Ambil: {formatPickupDate(order.pickupDate)}
+                        </span>
+                      </div>
+                    )}
+
+                    {orderMethod === 'Dikirim / COD' && (
+                      <div className="flex items-center gap-3">
+                        <Clock className="w-4 h-4 text-slate-300" />
+                        <span className="text-xs font-medium text-slate-500">
+                          Pengiriman: 1 hari setelah checkout
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {order.note && (
-                    <div className="p-3 bg-brand-cream/50 rounded-lg border border-brand-pink-dark/5">
+                  {orderMethod === 'Dikirim / COD' && order.deliveryAddress && (
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
+                        Alamat Pengiriman:
+                      </p>
+                      <p className="text-xs text-slate-600 whitespace-pre-line">
+                        {order.deliveryAddress}
+                      </p>
+                    </div>
+                  )}
+
+                  {orderMethod === 'Dikirim / COD' && order.deliveryLocationUrl && (
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
+                        Lokasi:
+                      </p>
+                      <a
+                        href={order.deliveryLocationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                        Lihat Lokasi Pengiriman
+                      </a>
+                    </div>
+                  )}
+
+                  {cleanNote && (
+                    <div className="p-3 bg-brand-cream/50 rounded-lg border border-brand-pink-dark/5">
+                      <p className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">
+                        <StickyNote className="w-3 h-3" />
                         Catatan:
                       </p>
-                      <p className="text-xs text-slate-600 italic">"{order.note}"</p>
+                      <p className="text-xs text-slate-600 italic whitespace-pre-line">
+                        "{cleanNote}"
+                      </p>
                     </div>
                   )}
                 </div>

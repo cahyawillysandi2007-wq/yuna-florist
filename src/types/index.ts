@@ -36,6 +36,9 @@ export interface Order {
   pickupDate: string;
   status: 'New' | 'Processing' | 'Completed' | 'Cancelled' | 'CancelRequested' | 'CancelRejected';
   createdAt: any;
+  orderMethod?: string;
+  deliveryAddress?: string;
+  deliveryLocationUrl?: string;
 }
 
 export interface StoreSettings {

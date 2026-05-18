@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  setPersistence,
+  browserLocalPersistence
+} from 'firebase/auth';
 import {
   Lock,
   Mail,
@@ -28,14 +33,29 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        navigate('/admin', { replace: true });
+      } else {
+        setCheckingAuth(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      await setPersistence(auth, browserLocalPersistence);
       await signInWithEmailAndPassword(auth, email, password);
-      navigate('/admin');
+      navigate('/admin', { replace: true });
     } catch (err) {
       console.error(err);
       setError('Email atau password salah. Silakan coba lagi.');
@@ -44,6 +64,16 @@ export default function AdminLogin() {
     }
   };
 
+  if (checkingAuth) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-brand-cream">
+      <div className="text-center">
+        <div className="w-10 h-10 border-4 border-brand-pink-dark border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-sm text-slate-500 font-medium">Memeriksa login...</p>
+      </div>
+    </div>
+  );
+}
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#fffaf8]">
       {/* Soft Background */}

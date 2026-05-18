@@ -174,7 +174,11 @@ export default function HelpMeChoose() {
                     className="flex items-center justify-between p-6 rounded-2xl border border-slate-100 hover:border-brand-pink-dark/30 hover:bg-brand-pink transition-all group text-left"
                   >
                     <div className="flex items-center gap-4">
-                       {opt.icon && <div className="text-brand-pink-dark">{opt.icon}</div>}
+                      {'icon' in opt && opt.icon && (
+                        <div className="text-brand-pink-dark">
+                          {opt.icon}
+                        </div>
+                      )}
                        <span className="font-bold text-slate-600 group-hover:text-brand-pink-dark">{opt.label}</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-slate-200 group-hover:text-brand-pink-dark group-hover:translate-x-1 transition-all" />

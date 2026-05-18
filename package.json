@@ -46,14 +46,18 @@
     "vite": "^6.2.3"
   },
   "build": {
-    "appId": "com.yunaflorist.admin",
-    "productName": "Yuna Florist Admin",
-    "win": {
-      "target": "nsis"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
+  "appId": "com.yunaflorist.admin",
+  "productName": "Yuna Florist Admin",
+  "directories": {
+    "output": "release"
+  },
+  "win": {
+    "target": "nsis",
+    "icon": "build/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
   }
+}
 }

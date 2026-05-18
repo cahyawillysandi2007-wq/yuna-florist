@@ -1,5 +1,7 @@
 const { app, BrowserWindow, shell } = require('electron');
 
+app.setName('Yuna Florist Admin');
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
@@ -8,13 +10,29 @@ function createWindow() {
     minHeight: 650,
     title: 'Yuna Florist Admin',
     autoHideMenuBar: true,
+    show: false,
+    focusable: true,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      sandbox: false,
+      webSecurity: true,
+      partition: 'persist:yunaflorist'
     }
   });
 
-  win.loadURL('https://yuna-florist.vercel.app/admin/login');
+  const isDev = !app.isPackaged;
+  win.loadURL(isDev ? 'http://localhost:3000/admin/login' : 'https://yuna-florist.vercel.app/admin/login');
+
+  win.once('ready-to-show', () => {
+    win.show();
+    win.focus();
+    win.webContents.focus();
+  });
+
+  win.webContents.on('did-finish-load', () => {
+    win.webContents.focus();
+  });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -22,16 +40,18 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
-  }
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
   }
 });
